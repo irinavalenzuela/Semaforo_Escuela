@@ -215,4 +215,29 @@ semaforo_school$`Month 7th visit 2015` <- ifelse(semaforo_school$`Month 7th visi
 # Create the summary
 
 datasummary(All(as.data.frame(semaforo_school)) ~ N + Mean + SD, data=semaforo_school, output = 'table_school_summary.tex')
+
+datasummary_skim(semaforo_school)
 ```
+
+|                                   | Unique (#) | Missing (%) |  Mean |    SD |  Min | Median |    Max |
+|:----------------------------------|-----------:|------------:|------:|------:|-----:|-------:|-------:|
+| N visit 2015                      |          8 |           0 |   2.0 |   1.3 |  0.0 |    2.0 |    7.0 |
+| N visit 2016                      |          6 |           0 |   1.2 |   0.8 |  0.0 |    1.0 |    5.0 |
+| Month 1st visit 2015              |          9 |          14 |   5.9 |   1.9 |  4.0 |    5.0 |   11.0 |
+| Month 2nd visit 2015              |          8 |          38 |   8.0 |   1.5 |  5.0 |    8.0 |   11.0 |
+| Month 3rd visit 2015              |          7 |          63 |   9.6 |   1.3 |  6.0 |   10.0 |   11.0 |
+| Month 4th visit 2015              |          6 |          90 |   9.6 |   0.9 |  7.0 |    9.0 |   11.0 |
+| Month 5th visit 2015              |          5 |          96 |  10.1 |   0.6 |  8.0 |   10.0 |   11.0 |
+| Month 6th visit 2015              |          3 |          99 |  10.3 |   0.5 | 10.0 |   10.0 |   11.0 |
+| Month 7th visit 2015              |          2 |         100 |  11.0 |   0.0 | 11.0 |   11.0 |   11.0 |
+| Month Last visit 2015             |         10 |           1 |   8.0 |   3.6 |  0.0 |    9.0 |   11.0 |
+| Age of school                     |        122 |          20 |  37.5 |  16.3 |  0.0 |   38.0 |  187.0 |
+| N students                        |       1001 |           0 | 212.8 | 238.2 |  2.0 |  110.0 | 1890.0 |
+| N teachers                        |         66 |           0 |   9.4 |   9.1 |  0.0 |    6.0 |   90.0 |
+| N computers with internet         |        164 |           0 |   7.1 |  23.9 |  0.0 |    0.0 |  695.0 |
+| N computers without internet      |        136 |           0 |   9.0 |  18.3 |  0.0 |    0.0 |  390.0 |
+| Has science lab                   |          3 |           5 |   0.2 |   0.4 |  0.0 |    0.0 |    1.0 |
+| Has library                       |          3 |           5 |   0.5 |   0.5 |  0.0 |    0.0 |    1.0 |
+| Access to public electric network |          3 |           2 |   0.9 |   0.3 |  0.0 |    1.0 |    1.0 |
+| Access to public water system     |          3 |           2 |   0.7 |   0.4 |  0.0 |    1.0 |    1.0 |
+| Access to public sewage system    |          3 |           2 |   0.6 |   0.5 |  0.0 |    1.0 |    1.0 |
