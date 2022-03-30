@@ -350,12 +350,9 @@ datasummary( (`School-average reading test score` + `School-average math test sc
 
 ``` r
 # N of visits in 2015 for primary school (It is primary school because all of them has ECE 2 grade primary school test)
-
-
 plot_nv2015 <- ggplot(semaforo_school, aes(x = `N visit 2015`)) +
   geom_bar(color = "white") +
   labs(x = "Number of Semaforo Escuela Visits 2015", y = "Number of schools")
-
 plot_nv2015
 ```
 
@@ -363,11 +360,9 @@ plot_nv2015
 
 ``` r
 # N of visits 2016
-
 plot_nv2016 <- ggplot(semaforo_school, aes(x = `N visit 2016`)) +
   geom_bar(color = "white") +
   labs(x = "Number of Semaforo Escuela Visits 2016", y = "Number of schools")
-
 plot_nv2016
 ```
 
@@ -389,7 +384,6 @@ plot_nv1516 <- ggplot(semaforo_school, aes(x= `N visit 2015`, y = `N visit 2016`
   geom_count(col="tomato3",show.legend=F)+
   labs(x = "N visits 2015", y="N visits 2016")+
   theme_bw()
-
 plot_nv1516
 ```
 
@@ -425,8 +419,6 @@ plot_month_v115 <- semaforo_school %>%
   geom_bar(fill = "#FF6666") +
   labs(x = "Month of visit (1 visit)")+
   theme_bw()
-
-
 plot_month_v115
 ```
 
@@ -441,8 +433,6 @@ plot_month_v12_15 <- semaforo_school %>%
   geom_bar(fill = "#FF6666") +
   labs(x = "Month of 1st visit (+1 visit)")+
   theme_bw()
-
-
 plot_month_v12_15
 ```
 
@@ -457,8 +447,6 @@ plot_month_v22_15 <- semaforo_school %>%
   geom_bar(fill = "#FF6666") +
   labs(x = "Month of 2nd visit (+1 visit)")+
   theme_bw()
-
-
 plot_month_v22_15
 ```
 
@@ -472,8 +460,6 @@ plot_month_v32_15 <- semaforo_school %>%
   geom_bar(fill = "#FF6666") +
   labs(x = "Month of 3rd visit (+1 visit)")+
   theme_bw()
-
-
 plot_month_v32_15
 ```
 
@@ -484,7 +470,6 @@ plot_month_v32_15
 ``` r
 graph1 <- ggplot(semaforo, aes(x = read_average)) +
   geom_histogram(color="white")
-
 graph1
 ```
 
@@ -494,11 +479,9 @@ graph1
 
 ``` r
 ## Let's have the histogram by two groups (treatemt)
-
 graph2 <- ggplot(semaforo, aes(x = read_average)) +
   geom_histogram(color="white") +
   facet_wrap(vars(treatment))
-
 graph2
 ```
 
@@ -594,7 +577,6 @@ plot1 <- ggplot(semaforo, aes(year, read_average, color= Group)) +
   stat_summary(geom = 'line') +
   geom_vline(xintercept = 2014) +
   theme_minimal() 
-
 plot1
 ```
 
@@ -605,7 +587,6 @@ plot1
 ``` r
 plot11 <- plot1 +
   labs(title = NULL, x= "year", y = "Reading score")
-
 plot11
 ```
 
@@ -626,7 +607,6 @@ plot2 <- ggplot(semaforo, aes(year, math_average, color= Group)) +
   stat_summary(geom = 'line') +
   geom_vline(xintercept = 2014) +
   theme_minimal() 
-
 plot2
 ```
 
@@ -639,7 +619,6 @@ plot2
 ``` r
 plot22 <- plot2 +
   labs(title = NULL, x= "year", y = "Math score")
-
 plot22
 ```
 
