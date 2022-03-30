@@ -1,0 +1,1662 @@
+*
+*
+*   Semaforo Escuela: How does affect student's performance
+*
+*---------------------------------------------------------------
+
+** Set directory path
+*
+
+global path "\\Client\D$\Documents" // Citrix destkop
+
+ 
+** Semaforo escuela database
+*.............................
+
+* destring modular_code
+
+*rename modular_code modular_code2
+*destring modular_code2, gen(modular_code)
+
+
+* Creating a date variable
+
+gen edate=ym(year, month)
+format edate %tm
+
+gen edate_day=mdy(month, day, year)
+format edate_day  %d
+
+
+* Creating day of visit (For 2019)
+
+gen edate_day=mdy(month_visit, day_visit, year_visit)
+format edate_day %d
+
+
+/* Preparing semaforo escuela for a merge
+First, I need to create a database that it is just at school level
+counting the number of visits within a year and the last month visit
+*/
+
+gen one=1
+
+* Create variable number of visit per year
+bys year modular_code: egen n_visit_year=sum(one) 
+
+
+* Look at number of visits per year
+tab year n_visit_year
+
+
+* Create variables of the date of 1st, 2nd, .. 7th visit
+
+sort year modular_code periodo
+bys year modular_code: gen order_visit=_n
+
+* Create variable last visit of the year
+
+bys year modular_code: egen max_n_visit=max(order_visit)
+bys year modular_code: gen last_visit_date=periodo if order_visit==max_n_visit
+
+
+* Explore number of visits per month
+
+graph bar (count) if order_visit==1, over(periodo, label(angle(ninety))) bar(1, fintensity(inten80))
+
+
+* Per unique modular code with column variables 2015_n_visits, 
+* 2016_n_visits, 2017_n_visits, 2018_n_visits, and 2019_n_visits
+
+
+gen visits_2015=n_visit_year if year==2015 & order_visit==1
+bys modular_code: egen n_visit_2015=sum(visits_2015)
+
+
+gen visits_2016=n_visit_year if year==2016 & order_visit==1
+bys modular_code: egen n_visit_2016=sum(visits_2016)
+
+
+gen visits_2017=n_visit_year if year==2017 & order_visit==1
+bys modular_code: egen n_visit_2017=sum(visits_2017)
+
+gen visits_2018=n_visit_year if year==2018 & order_visit==1
+bys modular_code: egen n_visit_2018=sum(visits_2018)
+
+
+gen visits_2019=n_visit_year if year==2019 & order_visit==1
+bys modular_code: egen n_visit_2019=sum(visits_2019)
+
+
+/* Create variable with the month of the visit per year
+		N of visits
+2015:	7
+2016:	5
+2017:	4
+2018:	3
+2019:	5
+
+*/
+
+gen v1_2015=month if year==2015 & order_visit==1
+bys modular_code: egen m_1_2015=sum(v1_2015)
+
+gen v2_2015=month if year==2015 & order_visit==2
+bys modular_code: egen m_2_2015=sum(v2_2015)
+
+gen v3_2015=month if year==2015 & order_visit==3
+bys modular_code: egen m_3_2015=sum(v3_2015)
+
+gen v4_2015=month if year==2015 & order_visit==4
+bys modular_code: egen m_4_2015=sum(v4_2015)
+
+gen v5_2015=month if year==2015 & order_visit==5
+bys modular_code: egen m_5_2015=sum(v5_2015)
+
+gen v6_2015=month if year==2015 & order_visit==6
+bys modular_code: egen m_6_2015=sum(v6_2015)
+
+gen v7_2015=month if year==2015 & order_visit==7
+bys modular_code: egen m_7_2015=sum(v7_2015)
+
+
+forval i=1/5 {
+gen v`i'_2016=month if year==2016 & order_visit==`i'
+bys modular_code: egen m_`i'_2016=sum(v`i'_2016)
+}
+
+forval i=1/4 {
+gen v`i'_2017=month if year==2017 & order_visit==`i'
+bys modular_code: egen m_`i'_2017=sum(v`i'_2017)
+}
+
+forval i=1/3 {
+gen v`i'_2018=month if year==2018 & order_visit==`i'
+bys modular_code: egen m_`i'_2018=sum(v`i'_2018)
+}
+
+forval i=1/5 {
+gen v`i'_2019=month if year==2019 & order_visit==`i'
+bys modular_code: egen m_`i'_2019=sum(v`i'_2019)
+}
+
+
+
+* Also create the month of the last visit for each year for each school
+
+forval i=5/9 {
+gen last_201`i'=month if year==201`i' & order_visit==max_n_visit
+bys modular_code: egen last_visit_201`i'=sum(last_201`i')
+}
+
+
+
+/* The variable teacher_attendace has percentage values:
+These variables were read into Stata as string variables because they contain
+ spaces, dollar signs, commas, and percent signs.
+We want to remove all of these characters and create new variables for date, 
+price, and percent containing numeric values. 
+After removing the percent sign, we want to convert the percent variable
+to decimal form 
+*/
+
+destring teachers_attendance, generate(teachers_attendance2) ignore("%") percent
+
+
+* Create a variable of the teachers_attendance per visit in 2015
+
+forval i=1/7 {
+gen teacher_v`i'_2015=teachers_attendance2 if year==2015 & order_visit==`i'
+bys modular_code: egen att_teacher_v`i'_2015=sum(teacher_v`i'_2015)
+}
+
+
+
+/* In addition I should add the school that did not received a visit in 2015,
+* but they received the visit later on, other wise, I will not see in 2015
+Because of that I cannot drop the other years (year!= 2015)
+*/
+
+* I will create _n per school, so I can identify one observation per school
+
+bys modular_code: gen order=_n
+
+* Then I will drop any order different from 1
+
+drop if order!=1
+
+
+* Final step to get a database 2015: 
+* Create a database that have nr of visit and last_visit_date
+
+keep modular_code local_code ugel dre area level n_visit_* ///
+ m_* last_visit_* att_teacher_v*
+
+sort modular_code
+
+
+/* Note: n_visit==2016 and so on have zeros, because there are schools
+that received a visit in 2015 but not in 2016 or 2017 and so on
+*/
+
+save "D:\Documents\TEMP\semaforo_2015.dta", replace
+
+
+* Distribution of number of visits per school 2015-2019
+
+gen visits_15_19=n_visit_2015 + n_visit_2016 + n_visit_2017 ///
++ n_visit_2018 + n_visit_2019
+
+graph bar (count) if level!="Inicial", over(visits_15_19)
+
+graph bar (count) if level!="Inicial", over(n_visit_2015)
+
+
+*********************************************************
+
+
+* ECE MINEDU
+*------------
+
+* Prepare ECE files: 2 Primary / 2014 - 2016
+*.............................................
+
+
+destring modular_code2, gen( modular_code)
+drop modular_code2
+
+* Schools without anexo
+
+drop if anexo==1
+drop anexo
+
+drop year_*
+
+
+
+
+forval i=4/6 {
+replace ece_201`i'="1" if ece_201`i'=="SI"
+replace ece_201`i'="2" if ece_201`i'=="NO"
+destring ece_201`i', replace
+label define ece_201`i'1 1 "Yes" 2 "No"
+label values ece_201`i' ece_201`i'1
+}
+
+rename type type_school
+rename dre dre_ece
+rename ugel ugel_ece
+rename area area_ece
+
+sort modular_code
+
+save "D:\Documents\DATABASE\Evaluacion Censal de Estudiantes - ECE\2P_ECE_2014_2016.dta", replace
+
+*********************************************************
+
+
+* Merging Semaforo escuela, ECE 2P (2014-2015) and school census 2014,2015, and rurality
+*****************************************************************************************
+
+/*
+Lets merge at modular code level, since both are from 2015
+And the ECE is for november
+*/
+
+use "D:\Documents\TEMP\School_census_2014.dta", clear
+
+* rename variables adding _2014
+rename * *_2014
+rename modular_code_2014 modular_code
+rename codlocal_2014 codlocal
+
+sort modular_code
+
+
+*merge modular_code using "D:\Documents\TEMP\School_census_2015.dta"
+
+merge modular_code using "D:\Documents\TEMP\semaforo_2015.dta"
+drop _merge
+
+sort modular_code
+
+
+merge modular_code using "D:\Documents\TEMP\ruralidad_criteria.dta"
+
+drop if _merge==2 // There is no info about SE or Scensus, only rurality
+
+drop _merge
+
+sort modular_code
+
+merge modular_code using "D:\Documents\DATABASE\Evaluacion Censal de Estudiantes - ECE\2P_ECE_2014_2016.dta"
+tab _merge
+
+* Keep modular codes from which there is ECE test scores
+* Use type_school==Estatal (variables from ECE)
+
+
+keep if type_school=="Estatal"
+
+keep if _merge==3
+
+save "D:\Documents\TEMP\Semaforo_ATE_2P.dta", replace
+
+
+***************************************************************************
+
+
+* ATE: 2 Primary (2014-2016), School Census 2014 and rurality
+***************************************************************
+
+use "${path}\TEMP\Semaforo_ATE_2P.dta", clear
+
+/* Notes
+..........
+The internvetion "Encouraging Teacher Attendance with Non-Monetary Recognition" by
+Peter Bergman (Columbia University), Micaela Sviatschi (Columbia University), Josefa Aguirre (Columbia University)
+was carried out from August to November 2016, not 2015. 
+*/
+
+*.............................................
+* 1. Cleanning and preparing relevant dataset
+*.............................................
+
+
+* Defining relevant sample: Have test scores for 2015 and 2014
+recode ece_2015 (2 = 0)
+recode ece_2014 (2 = 0)
+recode ece_2016 (2 = 0)
+
+gen ece_14_15=(ece_2014==1 & ece_2015==1)
+
+
+label variable ece_2014 "ECE 2014 Participation"
+label define ece_2014 0 "No" 1 "Yes"
+label values ece_2014 ece_2014
+
+label variable ece_2015 "ECE 2015 Participation"
+label define ece_2015 0 "No" 1 "Yes"
+label values ece_2015 ece_2015
+
+label variable ece_14_15 "ECE 2014-15 Participation"
+label define ece_14_15 0 "No" 1 "Yes"
+label values ece_14_15 ece_14_15
+
+
+* There are some schools (154) that has all information, including test scores,
+* but they do not have visits of Semaforo escuela durign 2015 - 2019
+
+forval i=5/9 {
+replace n_visit_201`i'=0 if n_visit_201`i'==.
+}
+
+
+** Control variables:
+*....................
+
+* Relevant variables are from 2014, because SE used 2014 information for their sampling
+
+gen rural=(area_2014==2)
+replace rural=. if area_2014==.
+label define rural1 0 "Urban" 1 "Rural"
+label values rural rural1
+
+
+* District fixed effects
+destring codgeo, gen(ubigeo)
+
+* UGEL fixed effects. I use ugel because it has 221 unique values
+* Instead, dre_ugel_2014 has 217 unique values
+
+encode ugel, gen(ugel_code)
+
+
+** Label variables
+*..................
+
+label variable n_visit_2015 "N of visits 2015"
+label variable m_1_2015 "Month of the 1st visit - 2015"
+label variable m_2_2015 "Month of the 2nd visit - 2015"
+label variable m_3_2015 "Month of the 3rd visit - 2015"
+
+label variable rural "Rural area"
+label variable total_students_2014 "N students (primary)"
+label variable total_enrolled_students_2014 "School size"
+label variable total_teachers_2014 "N teachers"
+label variable student_teacher_2014 "Students/teacher"
+label variable women_teacher_ratio_2014 "Female Teacher (%)"
+
+label variable total_computers_mc_2014 "N computers"
+label variable total_laptopXO_2014 "N laptopXO"
+label variable science_lab_2014 "Science Lab"
+label variable library_2014 "Library"
+label variable computers_local_2014 "N computers local"
+label variable laptop_xo_local_2014 "N laptopXO local"
+
+label variable electric_red_2014 "Electricity"
+label variable water_red_2014 "Potable water"
+label variable toilet_red_2014 "Sewage"
+
+label variable dist_school_mun_hour_2014 "Distance to municipality (Hours)"
+label variable dist_to_UGEL_hour_2014 "Distance to UGEL (Hours)"
+
+
+label variable read_average_2014 "Reading average 2014"
+label variable math_average_2014 "Math average 2014"
+
+
+** Let's redefine ruralidad to include only rural schools
+*........................................................
+
+gen rurality=ruralidad if rural==1
+label define rurality1 1 "Rural 1" 2 "Rural 2" 3 "Rural 3"
+label values rurality rurality1
+label variable rurality "Rurality level"
+
+tabulate rurality, gen(rural)
+
+label variable rural1 "Rural 1"
+label variable rural2 "Rural 2"
+label variable rural3 "Rural 3"
+
+
+label variable population_community "Population (village)"
+
+* Convert distance in minutes to hours
+*......................................
+
+gen distance_capital_hour=time_province_capital/60
+label variable distance_capital_hour "Distance to province capital (hours)"
+
+* Based on that, I identify outlier numbers (hours>=500): 6250 (260 dias), etc
+* In total, there are 22 outliers
+
+* Outliers = missing
+replace distance_capital_hour=. if distance_capital_hour>=1000
+replace time_province_capital=. if distance_capital_hour>=1000
+
+
+** Let's define number of visits
+*...............................
+
+* There are 128 schools that does not have info from School Census 2014
+* 122 of them did not receive a visit from SE in 2015
+* It seems they were not in the relevant population considered
+* for 2015 visits
+
+drop if area_2014==.
+
+gen visit=1 if n_visit_2015>=1
+replace visit=0 if n_visit_2015==0
+
+label variable visit "Received visit 2015"
+label define visit1 0 "No visit" 1 "1+ visit" 
+label values visit visit1
+
+
+* Lets define N visits: 0, 1, 2, and More than 2
+
+gen n_visits=n_visit_2015
+replace n_visits=3 if n_visit_2015>=3
+
+label variable n_visits "N Visits 2015"
+label define n_visits2 0 "No visit" 1 "1 visit" 2 "2 visits" 3 "3+ visits"
+label values n_visits n_visits2
+
+* Create dummies variables based on n_visits2
+
+tabulate n_visits, gen(visit_) 
+
+rename visit_1 visit_0
+label variable visit_0 "No visit"
+
+rename visit_2 visit_1
+label variable visit_1 "1 visit"
+
+rename visit_3 visit_2
+label variable visit_2 "2 visit"
+
+rename visit_4 visit_3
+label variable visit_3 "3+ visit"
+
+
+* Defining the treatment
+*........................
+
+* Treatment 1 = received or not a visit
+
+gen treated=1 if n_visits>=1
+replace treated=0 if n_visits==0
+
+label variable treated "Visit>=1"
+
+* Treatment 2 = receive 0 vs. 1 visit
+
+gen treated2=1 if n_visit_2015==1
+replace treated2=0 if n_visit_2015==0
+
+label variable treated2 "Visit==1"
+
+* Treatment 3, 4 = receive more than 1 visit, received one visit
+
+gen treated3=(n_visit_2015==1)
+label variable treated3 "Visit==1"
+
+gen treated4=(n_visit_2015>1)
+label variable treated4 "Visit>1"
+
+* Intensity of treatment
+
+gen intensity_treat= n_visit_2015
+label variable intensity_treat "N visits"
+
+
+** Outcome variables
+*....................
+
+* Raw variables: read_average_2015, math_average_2015
+
+* Z-scores: mean and standard deviation from all sample of public schools of 2015
+
+*findit zscore
+
+zscore read_average_2015
+zscore math_average_2015 
+
+egen mean_read_2015=mean(read_average_2015)
+egen sd_read_2015=sd(read_average_2015)
+
+egen mean_math_2015=mean(math_average_2015)
+egen sd_math_2015=sd(math_average_2015)
+
+gen z_read_average_2014=(read_average_2014 - mean_read_2015) / sd_read_2015
+gen z_math_average_2014=(math_average_2014 - mean_math_2015) / sd_math_2015
+
+* Competency levels: define the % of students that pass the minimun level of profiency
+
+* Three levels of competency: 
+/* 
+ Level 1 (Beginner), level 2 (In process), level 3 (Satisfactory)
+ 
+2 grado de primaria
+Math: Beginner (score <512), In progress (512=<score<=638), Satisfactory (score>638) 
+Reading: Beginner (score <458), In progress (458=<score<=583), Satisfactory (score>583)
+
+Notes from MINEDU-ECE:
+* The % of students by achievement level is only presented for those educational institutions 
+that have 10 or more students.
+* Take into account the representativeness of the results by educational institution according to its coverage. 
+* If coverage is low, the results could be biased. 
+* Use the average mean per educational institution, which is more sensitive to small variations than the percentages 
+*/
+
+* Not all schools have the ratio bases on levels of profinciency. I calculate them, then.
+
+gen read_beginner_2014=(read_level1_2014/ read_evaluated_2014)*100
+gen read_progress_2014=(read_level2_2014/ read_evaluated_2014)*100
+gen read_satisfactory_2014=(read_level3_2014/ read_evaluated_2014)*100
+
+gen math_beginner_2014=(math_level1_2014/ math_evaluated_2014)*100
+gen math_progress_2014=(math_level2_2014/ math_evaluated_2014)*100
+gen math_satisfactory_2014=(math_level3_2014/ math_evaluated_2014)*100
+
+gen read_beginner_2015=(read_level1_2015/ read_evaluated_2015)*100
+gen read_progress_2015=(read_level2_2015/ read_evaluated_2015)*100
+gen read_satisfactory_2015=(read_level3_2015/ read_evaluated_2015)*100
+
+gen math_beginner_2015=(math_level1_2015/ math_evaluated_2015)*100
+gen math_progress_2015=(math_level2_2015/ math_evaluated_2015)*100
+gen math_satisfactory_2015=(math_level3_2015/ math_evaluated_2015)*100
+
+
+
+
+* Label outcome variables
+*..........................
+
+label variable z_read_average_2014 "Reading Z-score 2014"
+label variable z_math_average_2014 "Math Z-score 2014"
+label variable z_read_average_2015 "Reading Z-score 2015"
+label variable z_math_average_2015 "Math Z-score 2015"
+label variable read_beginner_2014 "Reading: Beginner (%), 2014"
+label variable read_progress_2014 "Reading: In progress (%), 2014"
+label variable read_satisfactory_2014 "Reading: Satisfactory (%), 2014"
+label variable math_beginner_2014 "Math: Beginner (%), 2014"
+label variable math_progress_2014 "Math: In progress (%), 2014"
+label variable math_satisfactory_2014 "Math: Satisfactory (%), 2014"
+label variable read_beginner_2015 "Reading: Beginner (%), 2015"
+label variable read_progress_2015 "Reading: In progress (%), 2015"
+label variable read_satisfactory_2015 "Reading: Satisfactory (%), 2015"
+label variable math_beginner_2015 "Math: Beginner (%), 2015"
+label variable math_progress_2015 "Math: In progress (%), 2015"
+label variable math_satisfactory_2015 "Math: Satisfactory (%), 2015"
+
+
+
+* Percentage of public school by area participating in ECE 2014, ECE 2015
+*.........................................................................
+
+global project_folder "${path}\2021\Semaforo Escuela\Graphs and tables"
+
+*ssc install tabout
+
+tab area ece_2014, column
+
+tab area ece_2015, column
+
+tab area ece_14_15 , row // % school that participated both years
+
+* To see the distribution of area among schools that took ECE 2014, 2015
+
+* TABLE. 2014-2015 ECE participation by area of residence
+tabout area ece_14_15 using "$project_folder\table_ece_area_14_15.tex", ///
+cells(freq row) format(1) clab(Freq row_%) ///
+replace ///
+style(tex) bt font(bold) 
+
+ 
+* Probability of taking test on treatment
+*.........................................
+
+tab intensity_treat ece_2014, row // N of visit by taking or not ECE
+
+tab intensity_treat ece_2015, row
+
+tab intensity_treat ece_14_15, row
+
+
+ 
+* Define trimmed data 
+*.....................
+
+* Include all rural school in less than 3.5 hours and all urban schools
+
+gen trim=1 if (time_province_capital<=210 & rural==1) | rural==0
+
+
+* Define baseline variables
+*............................
+ 
+
+* Baseline variables 
+global baseline_school rural student_teacher_2014 total_enrolled_students_2014  ///
+women_teacher_ratio_2014 science_lab_2014 library_2014 ///
+electric_red_2014 water_red_2014 toilet_red_2014 ///
+ dist_to_UGEL_hour_2014
+
+* Baseline outcomes 
+global baseline_outcome read_average_2014 math_average_2014 ///
+z_*_average_2014  read_beginner_2014 read_progress_2014 read_satisfactory_2014 ///
+ math_beginner_2014 math_progress_2014 math_satisfactory_2014
+
+
+*.........................
+* 2. Summary statistics
+*..........................
+
+global project_folder "${path}\2021\Semaforo Escuela\Graphs and tables"
+
+* All sample: public primary schools
+*....................................
+
+*ssc install estout, replace
+*ssc install ietoolkit
+
+
+est clear
+
+estpost tabstat visit_* $baseline_school $baseline_outcome, c(stat) stat(mean sd min max n)
+
+esttab, ///
+ cells(" mean(fmt(%13.2fc)) sd(fmt(%13.2fc)) min(fmt(%13.0fc)) max(fmt(%13.0fc)) count(fmt(%13.0fc))") nonumber ///
+  nomtitle nonote noobs label collabels("Mean" "SD" "Min" "Max" "N")
+ 
+* TABLE. Summary Statistics (Original Sample):
+esttab using "$project_folder\summary_all.tex", replace ///
+ cells(" mean(fmt(%13.2fc)) sd(fmt(%13.2fc)) count(fmt(%13.0fc))") nonumber ///
+  nomtitle nonote noobs label booktabs f ///
+  collabels("Mean" "SD" "N")
+  
+  
+* Analytical Sample
+*...................
+
+* Schools that have information about ECE 2014 and 2015 (ece_14_15==1), rural schools located
+* in less than 3.5 hours from province capital (trim==1). 
+
+* And have all info of baseline school characteristics (scensus14_nomiss==1)
+gen scensus14_nomiss=(student_teacher_2014!=. & library_2014!=. & electric_red_2014!=. & toilet_red_2014!=.)
+
+* Define the analytical sample
+gen analytical_sample=(ece_14_15==1 & trim==1 & scensus14_nomiss==1) 
+label variable analytical_sample "Analytical Sample"
+
+est clear
+
+estpost tabstat visit_* $baseline_school $baseline_outcome if analytical_sample==1, c(stat) stat(mean sd min max n)
+
+esttab, ///
+ cells(" mean(fmt(%13.2fc)) sd(fmt(%13.2fc)) min(fmt(%13.0fc)) max(fmt(%13.0fc)) count(fmt(%13.0fc))") nonumber ///
+  nomtitle nonote noobs label collabels("Mean" "SD" "Min" "Max" "N")
+ 
+* TABLE. Summary Statistics (Analytical Sample):
+esttab using "$project_folder\summary_analytical_sample.tex", replace ///
+ cells(" mean(fmt(%13.2fc)) sd(fmt(%13.2fc)) count(fmt(%13.0fc))") nonumber ///
+  nomtitle nonote noobs label booktabs f ///
+  collabels("Mean" "SD" "N")
+
+*** Rural Analytical sample 
+
+** Define baseline variables for rural schools
+
+global baseline_school_rural student_teacher_2014 total_enrolled_students_2014  ///
+women_teacher_ratio_2014 science_lab_2014 library_2014 ///
+electric_red_2014 water_red_2014 toilet_red_2014 ///
+ rurality distance_capital_hour population_community 
+
+ 
+est clear
+
+estpost tabstat visit visit_* $baseline_school_rural $baseline_outcome if analytical_sample==1 & rural==1, c(stat) stat(mean sd min max n)
+
+esttab, ///
+ cells(" mean(fmt(%13.2fc)) sd(fmt(%13.2fc)) min(fmt(%13.0fc)) max(fmt(%13.0fc)) count(fmt(%13.0fc))") nonumber ///
+  nomtitle nonote noobs label collabels("Mean" "SD" "Min" "Max" "N")
+ 
+* To latex:
+esttab using "$project_folder\summary_analytical_sample_rural.tex", replace ///
+ cells(" mean(fmt(%13.2fc)) sd(fmt(%13.2fc)) count(fmt(%13.0fc))") nonumber ///
+  nomtitle nonote noobs label booktabs f ///
+  collabels("Mean" "SD" "N")
+
+* Urban analytical sample
+ 
+est clear
+
+estpost tabstat visit visit_* $baseline_school $baseline_outcome if analytical_sample==1 & rural==0, c(stat) stat(mean sd min max n)
+
+esttab, ///
+ cells(" mean(fmt(%13.2fc)) sd(fmt(%13.2fc)) min(fmt(%13.0fc)) max(fmt(%13.0fc)) count(fmt(%13.0fc))") nonumber ///
+  nomtitle nonote noobs label collabels("Mean" "SD" "Min" "Max" "N")
+ 
+* To latex:
+esttab using "$project_folder\summary_analytical_sample_urban.tex", replace ///
+ cells(" mean(fmt(%13.2fc)) sd(fmt(%13.2fc)) count(fmt(%13.0fc))") nonumber ///
+  nomtitle nonote noobs label booktabs f ///
+  collabels("Mean" "SD" "N")
+  
+  
+** NEEDS REVISE 
+* Graph: Distribution of outcomes 2015 for the analitycal sample
+*.................................................................
+
+grstyle init
+grstyle set plain, grid dotted
+kdensity read_average_2015 if analytical_sample==1, gen (x_read d_read) xtitle("School-level Reading Test Score 2015")
+ 
+twoway area d_read x_read, color("black%50") ///
+		ytitle("Density") ///
+		xtitle("School-level Reading Test Score 2015") ///
+		scheme(s1mono)
+graph export "${path}\2021\Semaforo Escuela\Graphs and tables\density_read_2015.png", replace  
+
+
+grstyle init
+grstyle set plain, grid dotted
+kdensity math_average_2015 if analytical_sample==1, gen (x_math d_math) xtitle("School-level Math Test Score 2015")
+ 
+twoway area d_math x_math, color("red%50") ///
+		ytitle("Density") ///
+		xtitle("School-level Math Test Score 2015") ///
+		scheme(s1mono)
+graph export "${path}\2021\Semaforo Escuela\Graphs and tables\density_math_2014.png", replace  
+
+
+* FIGURE. Distribution of Raw Test Scores 2015 (Reading and Math)
+grstyle init
+grstyle set plain, grid dotted
+twoway area d_read x_read, color("blue%50") || ///
+		area d_math x_math, color("red%50") ///
+		ytitle("Density") ///
+		xtitle("School-level Test Score 2015") ///
+		legend(order(1 "Reading" 2 "Math")) 	
+graph export "${path}\2021\Semaforo Escuela\Graphs and tables\density_read_math_2015.png", replace  
+
+
+* Distribution of % of satisfactory level
+
+kdensity read_satisfactory_2015 if analytical_sample==1, gen (xs_read ds_read)
+
+kdensity math_satisfactory_2015 if analytical_sample==1, gen (xs_math ds_math)
+
+* FIGURE. Distribution of % Grade Level 2015 (Reading and Math)
+grstyle init
+grstyle set plain, grid dotted
+twoway area ds_read xs_read, color("blue%50") || ///
+		area ds_math xs_math, color("red%50") ///
+		ytitle("Density") ///
+		xtitle(" % Students at Satisfactory Level 2015 (School-level)") ///
+		legend(order(1 "Reading" 2 "Math")) 	
+graph export "${path}\2021\Semaforo Escuela\Graphs and tables\density_satisfactory_2015.png", replace  
+
+
+ 
+		
+*...............................................
+* 3. Assignment rule: N visits and School size
+*...............................................
+
+* Plot visits as a number of students conditional on the area for the analytical sample
+
+*ssc install grstyle, replace
+*ssc install coefplot, replace
+*ssc install lgraph
+
+* GRAPH. Number of Visits and Baseline School Size (2014)
+grstyle init
+grstyle set plain, grid dotted
+lgraph total_enrolled_students_2014 n_visit_2015 if analytical_sample==1,   errortype(ci(95)) ///
+  ytitle("Number of enrolled students in 2014 (Mean)") /// 
+ xline(1.5) xlabel(0(1)7) xtitle("Number of SE visits in 2015") lop(connect(none))
+graph export "${path}\2021\Semaforo Escuela\Graphs and tables\plot_size_nvisit.png", replace  
+
+
+
+grstyle init
+grstyle set plain, grid dotted
+lgraph total_enrolled_students_2014 n_visit_2015 if analytical_sample==1 & rural==1,   ///
+  ytitle("Number of enrolled students in 2014 (Mean)") /// 
+ xline(1.5) xlabel(0(1)7) xtitle("Number of SE visits in 2015") lop(connect(none))
+graph export "${path}\2021\Semaforo Escuela\Graphs and tables\plot_size_nvisit_rural.png", replace  
+
+ 
+ 
+ 
+grstyle init
+grstyle set plain, grid dotted
+lgraph total_enrolled_students_2014 n_visit_2015 if analytical_sample==1 & rural==0,   ///
+  ytitle("Number of enrolled students in 2014") /// 
+ xline(1.5) xlabel(0(1)7) xtitle("Number of SE visits in 2015") lop(connect(none))	
+graph export "${path}\2021\Semaforo Escuela\Graphs and tables\plot_size_nvisit_urban.png", replace  
+		
+
+		
+*..................
+* 4. Balance test 
+*..................
+
+* Balance test controlling for sample design: area, school size, and UGEL fe 
+
+* Baseline variables without school size and rural
+global baseline_BT student_teacher_2014  ///
+women_teacher_ratio_2014 science_lab_2014 library_2014 ///
+electric_red_2014 water_red_2014 toilet_red_2014 ///
+ dist_to_UGEL_hour_2014 ///
+read_average_2014 math_average_2014 
+
+
+** BT: Whole sample
+*...................
+
+* TABLE. Balance Test - All Analytical Sample
+iebaltab  $baseline_BT if analytical_sample==1 & ugel_code!=., ///
+		fixedeffect(ugel_code) ///
+		covariates (rural total_enrolled_students_2014) ///
+		 grpvar(visit) ///
+        savetex("$project_folder\balancetable_visit") rowvarlabels
+
+
+* TABLE. Balannce Test By Number of Visits
+iebaltab  $baseline_BT if analytical_sample==1 & ugel_code!=., ///
+		fixedeffect(ugel_code) ///
+		covariates (rural total_enrolled_students_2014) ///
+		 grpvar(n_visits) ///
+        savetex("$project_folder\balancetable_nvisits") rowvarlabels onerow 
+
+		
+** BT: rural sample
+*...................
+
+* TABLE. Balance Test - Rural sample
+iebaltab  $baseline_BT if analytical_sample==1 & ugel_code!=. & rural==1, ///
+		fixedeffect(ugel_code) ///
+		covariates (total_enrolled_students_2014) ///
+		 grpvar(visit) ///
+        savetex("$project_folder\balancetable_visit_rural") rowvarlabels 
+
+* TABLE. Balance Test by Number of Visits - Rural sample		
+iebaltab  $baseline_BT if analytical_sample==1 & ugel_code!=. & rural==1, ///
+		fixedeffect(ugel_code) ///
+		covariates (total_enrolled_students_2014) ///
+		 grpvar(n_visits) ///
+        savetex("$project_folder\balancetable_nvisit_rural") rowvarlabels onerow 
+
+
+** BT: Urban sample
+*...................
+
+* TABLE. Balance Test - Urban sample
+iebaltab  $baseline_BT if analytical_sample==1 & ugel_code!=. & rural==0, ///
+		fixedeffect(ugel_code) ///
+		covariates (total_enrolled_students_2014) ///
+		 grpvar(visit) ///
+        savetex("$project_folder\balancetable_visit_urban") rowvarlabels
+
+		
+* TABLE. Balance Test by Number of Visits - Urban sample		
+iebaltab  $baseline_BT if analytical_sample==1 & ugel_code!=. & rural==0, ///
+		fixedeffect(ugel_code) ///
+		covariates (total_enrolled_students_2014) ///
+		 grpvar(n_visits) ///
+        savetex("$project_folder\balancetable_nvisit_urban") rowvarlabels onerow 
+
+		
+*..................
+* 5. Estimation 
+*..................
+
+* Analytical sample, controls, UGEL FE
+
+* Define school characteristics controls:
+
+* Controls - all sample
+global controls_all  rural student_teacher_2014 total_enrolled_students_2014  ///
+women_teacher_ratio_2014 science_lab_2014 library_2014 ///
+electric_red_2014 water_red_2014 toilet_red_2014 ///
+ dist_to_UGEL_hour_2014 
+
+* Controls - rural sample 
+global controls_rural student_teacher_2014 total_enrolled_students_2014  ///
+women_teacher_ratio_2014 science_lab_2014 library_2014 ///
+electric_red_2014 water_red_2014 toilet_red_2014 ///
+  distance_capital_hour population_community  
+
+* Controls - urban sample  
+global controls_urban  student_teacher_2014 total_enrolled_students_2014  ///
+women_teacher_ratio_2014 science_lab_2014 library_2014 ///
+electric_red_2014 water_red_2014 toilet_red_2014 ///
+ dist_to_UGEL_hour_2014   
+  
+* Baseline outcomes 
+global baseline_outcome read_average_2014 math_average_2014 ///
+z_*_average_2014  *_beginner_2014 *_progress_2014 *_satisfactory_2014
+
+
+
+* 5.1 Effect on Z-scores
+*.........................
+
+
+** Treatment 2 **
+eststo clear
+
+* Reading - all sample
+eststo: xi: reg z_read_average_2015 treated2 $controls_all z_read_average_2014 i.ugel_code if analytical_sample==1 & ugel_code!=., robust
+
+* Math - all sample
+eststo: xi: reg z_math_average_2015 treated2 $controls_all z_math_average_2014 i.ugel_code if analytical_sample==1 & ugel_code!=., robust
+
+/*
+esttab, compress
+esttab, keep(treated2) ///
+se label  star(* 0.10 ** 0.05 *** 0.01) 
+
+esttab using "$project_folder\table_outcome_all.tex", keep(treated2) ///
+se label  star(* 0.10 ** 0.05 *** 0.01)  
+*/
+
+*eststo clear
+* Reading - rural sample
+eststo: xi: reg z_read_average_2015 treated2 $controls_rural z_read_average_2014 i.ugel_code if analytical_sample==1 & ugel_code!=. & rural==1, robust
+
+* Math - rural sample
+eststo: xi: reg z_math_average_2015 treated2 $controls_rural z_math_average_2014 i.ugel_code if analytical_sample==1 & ugel_code!=. & rural==1, robust
+
+/*
+esttab, compress
+esttab, keep(treated2) ///
+se label  star(* 0.10 ** 0.05 *** 0.01) 
+
+esttab using "$project_folder\table_outcome_rural.tex", keep(treated2) ///
+se label  star(* 0.10 ** 0.05 *** 0.01)  
+*/
+
+*eststo clear
+* Reading - urban sample
+eststo: xi: reg z_read_average_2015 treated2 $controls_urban z_read_average_2014 i.ugel_code if analytical_sample==1 & ugel_code!=. & rural==0, robust
+
+* Math - urban sample
+eststo: xi: reg z_math_average_2015 treated2 $controls_urban z_math_average_2014 i.ugel_code if analytical_sample==1 & ugel_code!=. & rural==0, robust
+
+esttab, compress
+esttab, keep(treated2) ///
+se label  star(* 0.10 ** 0.05 *** 0.01) 
+
+esttab using "$project_folder\table_outcome.tex", keep(treated2) ///
+se label  star(* 0.10 ** 0.05 *** 0.01)  
+
+
+
+
+
+* 5.1 Effect on % Satisfactory performance
+*..........................................
+
+
+** Treatment 2 **
+eststo clear
+
+* Reading - all sample
+eststo: xi: reg read_satisfactory_2015 treated2 $controls_all read_satisfactory_2014 i.ugel_code if analytical_sample==1 & ugel_code!=., robust
+
+* Reading - rural sample
+eststo: xi: reg read_satisfactory_2015 treated2 $controls_rural read_satisfactory_2014 i.ugel_code if analytical_sample==1 & ugel_code!=. & rural==1, robust
+
+* Reading - urban sample
+eststo: xi: reg read_satisfactory_2015 treated2 $controls_urban read_satisfactory_2014 i.ugel_code if analytical_sample==1 & ugel_code!=. & rural==0, robust
+
+* Math - all sample
+eststo: xi: reg math_satisfactory_2015 treated2 $controls_all math_satisfactory_2014 i.ugel_code if analytical_sample==1 & ugel_code!=., robust
+
+* Math - rural sample
+eststo: xi: reg math_satisfactory_2015 treated2 $controls_rural math_satisfactory_2014 i.ugel_code if analytical_sample==1 & ugel_code!=. & rural==1, robust
+
+* Math - urban sample
+eststo: xi: reg math_satisfactory_2015 treated2 $controls_urban math_satisfactory_2014 i.ugel_code if analytical_sample==1 & ugel_code!=. & rural==0, robust
+
+esttab, compress
+esttab, keep(treated2) ///
+se label  star(* 0.10 ** 0.05 *** 0.01) 
+
+
+*...........................
+* 6. Heterogenous Effects
+*...........................
+
+
+* 6.1 Quantile Regression
+*..........................
+
+ssc install qregplot
+findit xtrifreg
+ssc install reghdfe
+ssc install ftools
+ssc install rif
+ssc install grstyle
+ssc install palettes
+ssc install colrspace
+
+
+** Outcome: Z-scores
+*....................
+
+* Treatment 2
+* Sample - All schools
+
+
+* Reading
+rifhdreg z_read_average_2015 treated2 $controls_all z_read_average_2014 /// 
+if analytical_sample==1 & ugel_code!=., ///
+rif(q(50))  abs(ugel_code) 
+
+grstyle init
+grstyle set plain, grid dotted
+qregplot treated2, q(5(5)95) raopt(fcolor(gray%30) lcolor(%0)) lnopt(lpattern(dash) lcolor(black%70)) twopt(yline(0, lcolor(blue%50)) ytitle("Coefficient")) label
+
+graph export "${path}\2021\Semaforo Escuela\Graphs and tables\quantile_Zread_treated2_all.png", replace  
+
+* Math
+rifhdreg z_math_average_2015 treated2 $controls_all z_math_average_2014 /// 
+if analytical_sample==1 & ugel_code!=., ///
+rif(q(50))  abs(ugel_code) 
+
+grstyle init
+grstyle set plain, grid dotted
+qregplot treated2, q(5(5)95) raopt(fcolor(gray%30) lcolor(%0)) lnopt(lpattern(dash) lcolor(black%70)) twopt(yline(0, lcolor(blue%50)) ytitle("Coefficient")) label
+
+graph export "${path}\2021\Semaforo Escuela\Graphs and tables\quantile_Zmath_treated2_all.png", replace  
+
+
+
+* Sample - Rural schools
+
+* Reading
+rifhdreg z_read_average_2015 treated2 $controls_rural z_read_average_2014 /// 
+if analytical_sample==1 & ugel_code!=. & rural==1, ///
+rif(q(50))  abs(ugel_code) 
+
+grstyle init
+grstyle set plain, grid dotted
+qregplot treated2, q(5(5)95) raopt(fcolor(gray%30) lcolor(%0)) lnopt(lpattern(dash) lcolor(black%70)) twopt(yline(0, lcolor(blue%50)) ytitle("Coefficient")) label
+
+graph export "${path}\2021\Semaforo Escuela\Graphs and tables\quantile_Zread_treated2_rural.png", replace  
+
+* Math
+rifhdreg z_math_average_2015 treated2 $controls_rural z_math_average_2014 /// 
+if analytical_sample==1 & ugel_code!=. & rural==1, ///
+rif(q(50))  abs(ugel_code) 
+
+grstyle init
+grstyle set plain, grid dotted
+qregplot treated2, q(5(5)95) raopt(fcolor(gray%30) lcolor(%0)) lnopt(lpattern(dash) lcolor(black%70)) twopt(yline(0, lcolor(blue%50)) ytitle("Coefficient")) label
+
+graph export "${path}\2021\Semaforo Escuela\Graphs and tables\quantile_Zmath_treated2_rural.png", replace  
+
+
+
+* Sample - Urban schools
+
+* Reading
+rifhdreg z_read_average_2015 treated2 $controls_urban z_read_average_2014 /// 
+if analytical_sample==1 & ugel_code!=. & rural==0, ///
+rif(q(50))  abs(ugel_code) 
+
+grstyle init
+grstyle set plain, grid dotted
+qregplot treated2, q(5(5)95) raopt(fcolor(gray%30) lcolor(%0)) lnopt(lpattern(dash) lcolor(black%70)) twopt(yline(0, lcolor(blue%50)) ytitle("Coefficient")) label
+
+graph export "${path}\2021\Semaforo Escuela\Graphs and tables\quantile_Zread_treated2_urban.png", replace  
+
+* Math
+rifhdreg z_math_average_2015 treated2 $controls_urban z_math_average_2014 /// 
+if analytical_sample==1 & ugel_code!=. & rural==0, ///
+rif(q(50))  abs(ugel_code) 
+
+grstyle init
+grstyle set plain, grid dotted
+qregplot treated2, q(5(5)95) raopt(fcolor(gray%30) lcolor(%0)) lnopt(lpattern(dash) lcolor(black%70)) twopt(yline(0, lcolor(blue%50)) ytitle("Coefficient")) label
+
+graph export "${path}\2021\Semaforo Escuela\Graphs and tables\quantile_Zmath_treated2_urban.png", replace  
+
+* 6.2. Heterogenous effect on school size
+*..........................................
+
+* Create dummies variables of school size based on percentile
+
+gen ssize_1_all=(total_students_2014<=31)
+
+gen ssize_2_all=(total_students_2014>31 & total_students_2014<=39)
+
+gen ssize_3_all=(total_students_2014>39 & total_students_2014<=53)
+
+gen ssize_4_all=(total_students_2014>53 & total_students_2014<=76)
+
+gen ssize_5_all=(total_students_2014>76 & total_students_2014<=138)
+
+gen ssize_6_all=(total_students_2014>138)
+
+
+gen treated2_ssize_1_all=treated2*ssize_1_all
+gen treated2_ssize_2_all=treated2*ssize_2_all
+gen treated2_ssize_3_all=treated2*ssize_3_all
+gen treated2_ssize_4_all=treated2*ssize_4_all
+gen treated2_ssize_5_all=treated2*ssize_5_all
+gen treated2_ssize_6_all=treated2*ssize_6_all
+
+
+label variable treated2_ssize_1_all "<=31"
+label variable treated2_ssize_2_all "32-39"
+label variable treated2_ssize_3_all "40-53"
+label variable treated2_ssize_4_all "54-76"
+label variable treated2_ssize_5_all "77-138"
+label variable treated2_ssize_6_all ">=139"
+
+
+
+* Controls without school size - all sample
+global controls_ssize_all  rural student_teacher_2014  ///
+women_teacher_ratio_2014 science_lab_2014 library_2014 ///
+electric_red_2014 water_red_2014 toilet_red_2014 ///
+ dist_to_UGEL_hour_2014 
+
+* Reading
+xi: reg z_read_average_2015 treated2 ssize_*_all   treated2_ssize_2_all treated2_ssize_3_all treated2_ssize_4_all treated2_ssize_5_all treated2_ssize_6_all  $controls_ssize_all z_read_average_2014 i.ugel_code if analytical_sample==1 & ugel_code!=. , robust
+estimates store read_ssize
+
+grstyle init
+grstyle set plain, grid dotted
+coefplot read_ssize, keep(treated2_ssize_*_all) yline(0) ytitle("Coefficient") xtitle("School Size (N of students enrolled 2014)") vertical
+
+*GRAPH. Visit interacting with school size
+graph export "${path}\2021\Semaforo Escuela\Graphs and tables\coefplot_ssize_read_all.png", replace  
+
+* Math
+xi: reg z_math_average_2015 treated2 ssize_*_all   treated2_ssize_2_all treated2_ssize_3_all treated2_ssize_4_all treated2_ssize_5_all treated2_ssize_6_all  $controls_ssize_all z_math_average_2014 i.ugel_code if analytical_sample==1 & ugel_code!=. , robust
+estimates store math_ssize
+
+grstyle init
+grstyle set plain, grid dotted
+coefplot math_ssize, keep(treated2_ssize_*_all) yline(0) ytitle("Coefficient") xtitle("School Size (N of students enrolled 2014)") vertical
+
+graph export "${path}\2021\Semaforo Escuela\Graphs and tables\coefplot_ssize_math_all.png", replace  
+
+
+* 6.4 Heterogenous effect by the month of the visit
+*...................................................
+
+
+* Intensity of visit based on the month of the visit
+
+gen early_visit=(m_1_2015>=4 & m_1_2015<=7)
+
+gen late_visit=(m_1_2015>=8 & m_1_2015<=11)
+
+
+label variable early_visit "Early visit (Apr-Jul)"
+label variable late_visit "Late visit (Aug-Nov)"
+
+* Only treated 2 - all 
+xi: reg z_read_average_2015 early_visit late_visit $controls_all z_read_average_2014 i.ugel_code if analytical_sample==1 & ugel_code!=. & treated2!=. , robust
+estimates store read_timev
+
+xi: reg z_math_average_2015 early_visit late_visit $controls_all z_math_average_2014 i.ugel_code if analytical_sample==1 & ugel_code!=. & treated2!=., robust
+estimates store math_timev
+
+coefplot (read_timev, label(Reading)) (math_timev, label(Math)) , keep(early_visit late_visit) yline(0) vertical ytitle("Coefficient") xtitle("Time of the Visit")
+
+graph export "${path}\2021\Semaforo Escuela\Graphs and tables\coefplot_time_visit.png", replace  
+
+
+* Only treated 2 - rural
+xi: reg z_read_average_2015 early_visit late_visit $controls_rural z_read_average_2014 i.ugel_code if analytical_sample==1 & ugel_code!=. & treated2!=. & rural==1, robust
+estimates store read_timev_rural
+
+xi: reg z_math_average_2015 early_visit late_visit $controls_rural z_math_average_2014 i.ugel_code if analytical_sample==1 & ugel_code!=. & treated2!=. & rural==1, robust
+estimates store math_timev_rural
+
+coefplot (read_timev_rural, label(Reading)) (math_timev_rural, label(Math)) , keep(early_visit late_visit) yline(0) vertical ytitle("Coefficient") xtitle("Time of the Visit")
+
+graph export "${path}\2021\Semaforo Escuela\Graphs and tables\coefplot_time_visit_rural.png", replace  
+
+
+
+* Only treated 2 - urban
+xi: reg z_read_average_2015 early_visit late_visit $controls_urban z_read_average_2014 i.ugel_code if analytical_sample==1 & ugel_code!=. & treated2!=. & rural==0, robust
+estimates store read_timev_urban
+
+xi: reg z_math_average_2015 early_visit late_visit $controls_urban z_math_average_2014 i.ugel_code if analytical_sample==1 & ugel_code!=. & treated2!=. & rural==0, robust
+estimates store math_timev_urban
+
+coefplot (read_timev_urban, label(Reading)) (math_timev_urban, label(Math)) , keep(early_visit late_visit) yline(0) vertical ytitle("Coefficient") xtitle("Time of the Visit")
+
+graph export "${path}\2021\Semaforo Escuela\Graphs and tables\coefplot_time_visit_urban.png", replace  
+
+
+
+
+
+* 6.3. Nonparametric kernel regression (STATA 15 +)
+*..................................................
+
+
+npregress kernel z_read_average_2015 read_average_2014
+
+* Using margins 
+*https://www.statalist.org/forums/forum/general-stata-discussion/general/1370770-margins-plot-of-treatment-effect-rather-than-y-for-values-of-a-covariate
+
+* Margins plot
+reg z_read_average_2015 i.treated##c.read_average_2014 $controls_rural  i.ugel_code if analytical_sample==1 & ugel_code!=. & rural==1, robust
+
+margins, dydx(treated) at(read_average_2014 = (300(50)800))
+marginsplot
+
+
+* https://www.stata.com/features/overview/nonparametric-regression/
+
+*...........................
+* 7. Robutness Check
+*...........................
+
+			
+** Propenity score matching
+*..........................
+
+ 
+* * 1. Estimate the propensity score for Treatment 1
+*----------------------------------------------------
+* (Triming time_province_capital>=210, 3.5 hours )
+ 
+* Pscore is the predict probability of received a visit from Semaforo Escuela from a logit model
+ 
+logit treated $controls_all read_average_2014 ///
+  math_average_2014 if time_province_capital<=210
+
+predict pscore1 if time_province_capital<=210
+
+
+* Common support evidence: Pscore plot
+
+twoway (kdensity pscore1 if treated==1, color(blue)) (kdensity pscore1 if treated==0, legend(order(1 "Treatment" 2 "Control")) fcolor(red))
+
+kdensity pscore1 if treated==1, gen (x1 d1)
+kdensity pscore1 if treated==0, gen (x0 d0)
+ 
+twoway area d1 x1, color("blue%50") || ///
+		area d0 x0, color("red%50") ///
+		ytitle("Kdensity pscore") ///
+		xtitle("Pr(treatment)") ///
+		legend(order(1 "Treatment" 2 "Control")) ///
+		scheme(s1mono)
+graph export "${path}\2021\Semaforo Escuela\Graphs and tables\common_support_treated1.png", replace  
+
+* Nearest-neighbor matching
+
+*  Identify nooverlap
+teffects psmatch (read_average_2015) (treated $controls_all read_average_2014, ///
+ logit) if time_province_capital<=210, atet gen(stub) nn(5)  osample(nooverlap)
+ 
+teffects psmatch (read_average_2015) (treated $controls_all read_average_2014, ///
+ logit) if time_province_capital<=210 & nooverlap!=1, atet gen(stub) nn(5)  osample(nol2)
+ 
+
+teffects psmatch (read_average_2015) (treated $controls_all read_average_2014, ///
+ logit) if time_province_capital<=210 & nooverlap!=1 & nol2!=1, atet gen(stub) nn(5)  
+ 
+tebalance summarize 
+
+mat M = r(table)
+
+* Plot balance of covariates
+
+set scheme plotplainblind
+coefplot (matrix(M[,1]), label(Unmatched) mcolor(blue%60) pstyle(p3)) (matrix(M[,2]), label(Matched) mcolor(red) pstyle(p4)), noci xline(0) xline(-0.15 0.15, lpattern(dash)) title("Standardized Mean Difference") 
+graph export "${path}\2021\Semaforo Escuela\Graphs and tables\check_balance_1.png", replace  
+ 
+ 
+* 2. Estimate the propensity score for Treatment 2
+*----------------------------------------------------
+
+logit treated2 $controls_all read_average_2014 math_average_2014 if time_province_capital<=210
+
+predict pscore2 if time_province_capital<=210
+
+
+* Common support evidence: Pscore plot
+
+kdensity pscore2 if treated==1, gen (x12 d12)
+kdensity pscore2 if treated==0, gen (x02 d02)
+ 
+twoway area d12 x12, color("blue%50") || ///
+		area d02 x02, color("red%50") ///
+		ytitle("Kdensity pscore") ///
+		xtitle("Pr(treatment)") ///		
+		legend(order(1 "Treatment" 2 "Control")) ///
+		scheme(s1mono)
+graph export "${path}\2021\Semaforo Escuela\Graphs and tables\common_support_treated2.png", replace  
+
+
+* Nearest-neighbor matching
+teffects psmatch (read_average_2015) (treated2 $controls_all read_average_2014, ///
+ logit) if time_province_capital<=210, atet nn(5)  
+ 
+tebalance summarize 
+
+mat M2 = r(table)
+
+* Plot balance of covariates
+
+set scheme plotplainblind
+coefplot (matrix(M2[,1]), label(Unmatched) mcolor(blue%60) pstyle(p3)) (matrix(M2[,2]), label(Matched) mcolor(red) pstyle(p4)), noci xline(0) xline(-0.15 0.15, lpattern(dash)) title("Standardized Mean Difference") 
+graph export "${path}\2021\Semaforo Escuela\Graphs and tables\check_balance_2.png", replace  
+
+
+
+* Now, look at the propensity score distribution for treatment and control groups
+hist pscore2, by(treated2) binrescale
+
+* Alternative I can use psmatch2
+psmatch2 treated2 $controls_all read_average_2014 if dist_to_UGEL_hour_2014<=3, ///
+ logit common
+
+psgraph // Evaluating the quality of the match
+
+pstest $controls_all read_average_2014 // Evaluate match with statistical tests
+
+
+
+
+ 
+**** Propensity score using rural and size of school
+*******************************************************
+
+ 
+* * 1. Estimate the propensity score for Treatment 1
+*----------------------------------------------------
+* (Triming time_province_capital>=210, 3.5 hours )
+ 
+* Pscore is the predict probability of received a visit from Semaforo Escuela from a logit model
+ 
+logit treated rural total_enrolled_students_2014  if time_province_capital<=210
+
+predict pscore3 if time_province_capital<=210
+
+
+* Common support evidence: Pscore plot
+
+kdensity pscore3 if treated==1, gen (x13 d13)
+kdensity pscore3 if treated==0, gen (x03 d03)
+ 
+twoway area d13 x13, color("edkblue%50") || ///
+		area d03 x03, color("ltblue%60") ///
+		ytitle("Kdensity pscore") ///
+		xtitle("Pr(treatment)") ///
+		legend(order(1 "Treatment" 2 "Control")) ///
+		scheme(s1mono)
+graph export "${path}\2021\Semaforo Escuela\Graphs and tables\common_support_treated1_3.png", replace  
+
+* Nearest-neighbor matching
+
+* To get the weights I need psmatch2
+
+ssc install psmatch2, replace
+
+psmatch2 treated rural total_enrolled_students_2014 if time_province_capital<=210, outcome(z_read_average_2015) n(5) logit com atet
+
+
+
+
+*  Identify nooverlap
+teffects psmatch (z_read_average_2015) (treated rural total_enrolled_students_2014, ///
+ logit) if time_province_capital<=210, atet gen(stub) nn(5)  osample(nooverlap)
+ 
+teffects psmatch (z_read_average_2015) (treated rural total_enrolled_students_2014, ///
+ logit) if time_province_capital<=210 & nooverlap!=1, atet gen(stub) nn(5)  osample(nol3)
+ 
+
+teffects psmatch (z_read_average_2015) (treated rural total_enrolled_students_2014, ///
+ logit) if time_province_capital<=210 & nooverlap!=1 & nol3!=1, atet gen(stub) nn(5)  
+ 
+tebalance summarize 
+
+mat M = r(table)
+
+* Plot balance of covariates: it only appears rural and size
+ssc install grstyle
+ssc install coefplot
+
+grstyle init
+grstyle set plain
+coefplot (matrix(M[,1]), label(Unmatched) mcolor(blue%60) pstyle(p3)) (matrix(M[,2]), label(Matched) mcolor(red) pstyle(p4)), noci xline(0) xline(-0.15 0.15, lpattern(dash)) title("Standardized Mean Difference") 
+graph export "${path}\2021\Semaforo Escuela\Graphs and tables\check_balance_3.png", replace  
+ 
+ 
+* 2. Estimate the propensity score for Treatment 2
+*----------------------------------------------------
+
+logit treated2 rural total_enrolled_students_2014 if time_province_capital<=210
+
+predict pscore4 if time_province_capital<=210
+
+
+* Common support evidence: Pscore plot
+
+kdensity pscore4 if treated2==1, gen (x14 d14)
+kdensity pscore4 if treated2==0, gen (x04 d04)
+ 
+twoway area d14 x14, color("blue%50") || ///
+		area d04 x04, color("red%50") ///
+		ytitle("Kdensity pscore") ///
+		xtitle("Pr(treatment)") ///		
+		legend(order(1 "Treatment" 2 "Control")) ///
+		scheme(s1mono)
+graph export "${path}\2021\Semaforo Escuela\Graphs and tables\common_support_treated2_4.png", replace  
+
+
+* Nearest-neighbor matching
+teffects psmatch (z2_read_average_2015) (treated2 rural total_enrolled_students_2014, ///
+ logit) if time_province_capital<=210, atet nn(5) 
+ 
+tebalance summarize 
+
+mat M2 = r(table)
+
+* Plot balance of covariates
+
+set scheme plotplainblind
+coefplot (matrix(M2[,1]), label(Unmatched) mcolor(blue%60) pstyle(p3)) (matrix(M2[,2]), label(Matched) mcolor(red) pstyle(p4)), noci xline(0) xline(-0.15 0.15, lpattern(dash)) title("Standardized Mean Difference") 
+graph export "${path}\2021\Semaforo Escuela\Graphs and tables\check_balance_2.png", replace  
+
+
+
+* Now, look at the propensity score distribution for treatment and control groups
+hist pscore2, by(treated2) binrescale
+
+* Alternative I can use psmatch2
+psmatch2 treated2 $controls_all read_average_2014 if dist_to_UGEL_hour_2014<=3, ///
+ logit common
+
+psgraph // Evaluating the quality of the match
+
+pstest $controls_all read_average_2014 // Evaluate match with statistical tests
+
+
+
+*https://stats.stackexchange.com/questions/15713/is-it-valid-to-include-a-baseline-measure-as-control-variable-when-testing-the-e
+
+
+** Results: Matching and regression
+*....................................
+
+* Reading test scores
+*......................
+eststo clear
+
+* 1. OLS with controls and UGEL FE, and trimming
+
+* Treatment 1
+eststo: xi: reg z_read_average_2015 treated $controls_all z_read_average_2014 i.ugel_code if time_province_capital<=210 & ugel_code!=., robust
+
+* Treatment 2
+eststo: xi: reg z2_read_average_2015 treated2 $controls_all z2_read_average_2014 i.ugel_code if time_province_capital<=210 & ugel_code!=., robust
+
+ 
+* 2. Coarsened exact matching (CEM)
+
+global controls_design area total_enrolled_students_2014 
+
+
+* Treatment 1
+ssc install cem
+
+cem $controls_design if time_province_capital<=210 & treated!=., treatment(treated)
+rename cem_strata cem_strata1
+rename cem_matched cem_matched1
+rename cem_weights cem_weights1
+
+global control_postcem  student_teacher_2014   ///
+women_teacher_ratio_2014 science_lab_2014 library_2014 ///
+electric_red_2014 water_red_2014 toilet_red_2014 ///
+ dist_to_UGEL_hour_2014 
+
+eststo: xi: reg z_read_average_2015 treated $control_postcem z_read_average_2014 i.ugel_code [iweight=cem_weights1] if time_province_capital<=210, robust
+
+
+* Treatment 2
+
+cem $controls_design if time_province_capital<=210 & treated2!=., treatment(treated2)
+rename cem_strata cem_strata2
+rename cem_matched cem_matched2
+rename cem_weights cem_weights2
+
+eststo: xi: reg z2_read_average_2015 treated2 $control_postcem z2_read_average_2014 i.ugel_code [iweight=cem_weights2] if time_province_capital<=210, robust
+
+/*
+* *. Nearest-neighbor matching
+
+* Treatment 1
+eststo: teffects psmatch (z_read_average_2015) (treated rural total_enrolled_students_2014, ///
+ logit) if time_province_capital<=210 & nooverlap!=1 & nol3!=1 & ugel_code!=., atet nn(5) osample(os)
+
+eststo: teffects psmatch (z_read_average_2015) (treated rural total_enrolled_students_2014 z_read_average_2014, ///
+ logit) if time_province_capital<=210 & nooverlap!=1 & nol3!=1 & os!=1 & ugel_code!=., atet nn(5)  
+ 
+ 
+* Treatment 2
+eststo: teffects psmatch (z2_read_average_2015) (treated2 rural total_enrolled_students_2014, ///
+ logit) if time_province_capital<=210 & ugel_code!=., atet nn(5) 
+*/
+
+
+esttab, compress
+esttab, keep(treated treated2) ///
+se label  star(* 0.10 ** 0.05 *** 0.01) 
+	
+	
+
+* Math test scores
+*......................
+
+eststo clear
+
+* 1. OLS with controls and UGEL FE, and trimming
+
+* Treatment 1
+eststo: xi: reg z_math_average_2015 treated $controls_all z_math_average_2014 i.ugel_code if time_province_capital<=210 & ugel_code!=. , robust
+
+* Treatment 2
+eststo: xi: reg z2_math_average_2015 treated2 $controls_all z2_math_average_2014 i.ugel_code if time_province_capital<=210 & ugel_code!=. , robust
+
+ 
+* 2. Coarsened exact matching (CEM)
+
+global controls_design area total_enrolled_students_2014 
+
+
+* Treatment 1
+eststo: xi: reg z_math_average_2015 treated $control_postcem z_math_average_2014 i.ugel_code [iweight=cem_weights1] if time_province_capital<=210, robust
+
+
+* Treatment 2
+eststo: xi: reg z2_math_average_2015 treated2 $control_postcem z2_math_average_2014 i.ugel_code [iweight=cem_weights2] if time_province_capital<=210, robust
+
+esttab, compress
+esttab, keep(treated treated2) ///
+se label  star(* 0.10 ** 0.05 *** 0.01) 
+
+
+*...............................................................
+** Results 2: Matching and regression (without baseline scores)
+*...............................................................
+
+* Reading test scores
+*......................
+eststo clear
+
+* 1. OLS with controls and UGEL FE, and trimming
+
+* Treatment 1
+eststo: xi: reg z_read_average_2015 treated $controls_all i.ugel_code if time_province_capital<=210 & ugel_code!=., robust
+
+* Treatment 2
+eststo: xi: reg z2_read_average_2015 treated2 $controls_all  i.ugel_code if time_province_capital<=210 & ugel_code!=., robust
+
+ 
+* 2. Coarsened exact matching (CEM)
+
+* Treatment 1
+
+eststo: xi: reg z_read_average_2015 treated $control_postcem  i.ugel_code [iweight=cem_weights1] if time_province_capital<=210, robust
+
+
+* Treatment 2
+eststo: xi: reg z2_read_average_2015 treated2 $control_postcem  i.ugel_code [iweight=cem_weights2] if time_province_capital<=210, robust
+
+
+esttab, compress
+esttab, keep(treated treated2) ///
+se label  star(* 0.10 ** 0.05 *** 0.01) 
+	
+	
+
+* Math test scores
+*......................
+
+eststo clear
+
+* 1. OLS with controls and UGEL FE, and trimming
+
+* Treatment 1
+eststo: xi: reg z_math_average_2015 treated $controls_all i.ugel_code if time_province_capital<=210 & ugel_code!=. , robust
+
+* Treatment 2
+eststo: xi: reg z2_math_average_2015 treated2 $controls_all i.ugel_code if time_province_capital<=210 & ugel_code!=. , robust
+
+ 
+* 2. Coarsened exact matching (CEM)
+
+* Treatment 1
+eststo: xi: reg z_math_average_2015 treated $control_postcem  i.ugel_code [iweight=cem_weights1] if time_province_capital<=210, robust
+
+* Treatment 2
+eststo: xi: reg z2_math_average_2015 treated2 $control_postcem i.ugel_code [iweight=cem_weights2] if time_province_capital<=210, robust
+
+esttab, compress
+esttab, keep(treated treated2) ///
+se label  star(* 0.10 ** 0.05 *** 0.01) 
+
+
+*~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+
+ 
