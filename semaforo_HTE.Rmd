@@ -1,0 +1,23 @@
+---
+title: "Semaforo HTE"
+author: "Irina Valenzuela"
+date: "6/13/2022"
+output: github_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Setup
+
+#### Working Directory
+
+```{r Working directory, warning=FALSE, error=FALSE, message=FALSE}
+# Check working directory
+getwd()
+
+```
+
+
+
