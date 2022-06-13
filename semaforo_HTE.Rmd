@@ -19,5 +19,41 @@ getwd()
 
 ```
 
+#### Install Packages
+
+```{r install-packages, eval=FALSE, warning=FALSE, error=FALSE, message=FALSE}
+install.packages('tidyverse') # Data Manipulation, includes ggplot2
+install.packages('haven')     # Loading data
+install.packages('stargazer') # Tables
+install.packages("GenericML") # GenericML
+#install.packages("mlr3")      # GenericLM depends on mlr3
+```
+
+#### Loading Libraries
+
+```{r Loading libraries, warning=FALSE, error=FALSE, message=FALSE}
+library(tidyverse)
+library(haven)
+library(stargazer)
+library(GenericML)
+```
+
+## 2 Data
+
+#### Load
+```{r Data, warning=FALSE, error=FALSE, message=FALSE}
+# Path to original STATA data directory
+data_folder <- "C:/Users/vlnzlrm2/OneDrive - University of Illinois - Urbana/Documents/2022/Semaforo Escuela 2022/2_Data/"
+
+# Reading the data
+semaforo_data <- read_dta(paste0(data_folder,"semaforo.dta"))
+
+# Exploring the data
+head(semaforo_data)
+```
+
+
+
+
 
 
